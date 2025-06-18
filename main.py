@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 from embed import get_chunks, get_embeddings
-from config import GEMINI_API_KEY
+from config import GEMINI_API_KEY, OPEN_API_KEY
 from extract_text import extract_text_from_markdown
 import asyncio
 import signal
@@ -102,7 +102,7 @@ async def process_save_markdown():
             for j in range(chunk_start, len(chunks)):
                 chunk = chunks[j]
                 try:
-                    embedding = await get_embeddings(chunk, api_key=GEMINI_API_KEY)
+                    embedding = await get_embeddings(chunk, api_key= OPEN_API_KEY)
                     all_chunks.append([chunk])  # Simplified - removed unnecessary list wrapping
                     all_embeddings.append([embedding])  # Simplified
                     all_original_urls.append([original_url])  # Simplified
@@ -112,7 +112,20 @@ async def process_save_markdown():
                 except Exception as e:
                     print(f"Error processing chunk in {file_path}: {e}")
                 finally:
+                    temp_data = {
+                        "chunks": all_chunks,
+                        "embeddings": all_embeddings,
+                        "original_urls": all_original_urls,
+                            "metadata": {
+                        "total_chunks": len(all_chunks),
+                        "total_files_processed": len(files),
+                        "processing_complete": True
+                        }
+                    }
+                    with open("discourse_embeddings_temp.txt", "w", encoding="utf-8") as f:
+                        f.write(str(temp_data))
                     pbar.update(1)
+                    
     
     # Save once at the end
     data_safe = {

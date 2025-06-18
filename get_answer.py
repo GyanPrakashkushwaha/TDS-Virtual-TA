@@ -45,60 +45,50 @@ def find_similar_content(query_embedding, MAX_SIMILAR_TEXT, discourse_data, mark
 
 def parse_llm_response(response):
     try:
-        # First try to split by "Sources:" heading
+        # Split by "Sources:" or similar headings
         parts = response.split("Sources:", 1)
-        
-        # If that doesn't work, try alternative formats
         if len(parts) == 1:
-            # Try other possible headings
             for heading in ["Source:", "References:", "Reference:"]:
                 if heading in response:
                     parts = response.split(heading, 1)
                     break
-        
+
         answer = parts[0].strip()
         links = []
-        
+
         if len(parts) > 1:
             sources_text = parts[1].strip()
             source_lines = sources_text.split("\n")
-            
             for line in source_lines:
                 line = line.strip()
                 if not line:
                     continue
-                    
-                # Remove list markers (1., 2., -, etc.)
+                # Remove list markers
                 line = re.sub(r'^\d+\.\s*', '', line)
                 line = re.sub(r'^-\s*', '', line)
-                
-                # Extract URL and text using more flexible patterns
-                url_match = re.search(r'URL:\s*\[(.*?)\]|url:\s*\[(.*?)\]|\[(http[^\]]+)\]|URL:\s*(http\S+)|url:\s*(http\S+)|(http\S+)', line, re.IGNORECASE)
-                text_match = re.search(r'Text:\s*\[(.*?)\]|text:\s*\[(.*?)\]|[""](.*?)[""]|Text:\s*"(.*?)"|text:\s*"(.*?)"', line, re.IGNORECASE)
-                
+                # Extract URL and text
+                url_match = re.search(
+                    r'URL:\s*\[(.*?)\]|url:\s*\[(.*?)\]|\[(http[^\]]+)\]|URL:\s*(http\S+)|url:\s*(http\S+)|(http\S+)',
+                    line, re.IGNORECASE)
+                text_match = re.search(
+                    r'Text:\s*\[(.*?)\]|text:\s*\[(.*?)\]|"(.*?)"|Text:\s*"(.*?)"|text:\s*"(.*?)"',
+                    line, re.IGNORECASE)
                 if url_match:
-                    # Find the first non-None group from the regex match
                     url = next((g for g in url_match.groups() if g), "")
                     url = url.strip()
-                    
-                    # Default text if no match
                     text = "Source reference"
-                    
-                    # If we found a text match, use it
                     if text_match:
-                        # Find the first non-None group from the regex match
                         text_value = next((g for g in text_match.groups() if g), "")
                         if text_value:
                             text = text_value.strip()
-                    
-                    # Only add if we have a valid URL
                     if url and url.startswith("http"):
                         links.append({"url": url, "text": text})
-        
-        return {"answer": answer, "links": links}
+
+        return {
+            "answer": answer,
+            "links": links
+        }
     except Exception as e:
-        error_msg = f"Error parsing LLM response: {e}"
-        # Return a basic response structure with the error
         return {
             "answer": "Error parsing the response from the language model.",
             "links": []

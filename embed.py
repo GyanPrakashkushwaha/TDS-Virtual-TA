@@ -1,9 +1,10 @@
 from google.genai import Client, types
-from helper import RateLimiter 
+from helper import RateLimiter, bytes_to_data_url
 import re
 import asyncio
 import base64
 from config import IMG_GENERATION_PROMPT
+import httpx
 
 rate_limiter = RateLimiter(requests_per_minute=50, requests_per_second=60)
 
@@ -11,15 +12,29 @@ rate_limiter = RateLimiter(requests_per_minute=50, requests_per_second=60)
 
 async def get_embeddings(text, api_key, model="gemini-embedding-exp-03-07", max_tries=10):
     # api_key = api_keys[0]
-    client = Client(api_key=api_key)
+    # client = Client(api_key=api_key)
+    headers = {
+        "Authorization": api_key,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "text-embedding-3-small",
+        "input": text
+    }
+    timeout = httpx.Timeout(30.0, connect=10.0)
+    
     for attempt in range(max_tries):
         try:
-            rate_limiter.wait()
-            response = client.models.embed_content(
-                model=model,
-                contents=text
-            )
-            return response.embeddings[0].values
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post("https://aipipe.org/openai/v1/embeddings", headers=headers, json=payload)
+                response.raise_for_status()  # Raise an exception for bad status codes
+                return response.json()["data"][0]["embedding"]  # Return JSON directly
+            # rate_limiter.wait()
+            # response = client.models.embed_content(
+            #     model=model,
+            #     contents=text
+            # )
+            # return response.embeddings[0].values
         except Exception as e:
             if "rate limit" in str(e).lower() or "quota" in str(e).lower():
                 wait_time = 2 ** attempt
@@ -34,24 +49,47 @@ async def get_embeddings(text, api_key, model="gemini-embedding-exp-03-07", max_
                 await asyncio.sleep(1)
 
 
-async def describe_base64_image(base64_image, api_key, max_tries):
+async def describe_base64_image(base64_image, api_key, max_tries, question):
     # Decode the base64 string to bytes
     image_bytes = base64.b64decode(base64_image)
-
-    client = Client(api_key=api_key)
+    image_data_url = bytes_to_data_url(image_bytes)
+    # client = Client(api_key=api_key)
+    url = "https://aipipe.org/openai/v1/chat/completions"
+    headers = {
+        "Authorization": api_key,
+        "Content-Type": "application/json"
+    }
+    payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": IMG_GENERATION_PROMPT},
+                        {"type": "image_url", "image_url": {"url": image_data_url}}
+                    ]
+                }
+            ]
+        }
     for attempt in range(max_tries):
         try:
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=[
-                    types.Part.from_bytes(
-                        data=image_bytes,
-                        mime_type='image/jpeg',  # or 'image/png' if your image is PNG
-                    ),
-                    IMG_GENERATION_PROMPT
-                ]
-            )
-            return response.text
+            async with httpx.post(url, headers=headers, json=payload) as response:
+                if response.status == 200:
+                    # print(response)
+                    result = await response.json()
+                    image_description = result["choices"][0]["message"]["content"]
+                    return image_description
+            # response = client.models.generate_content(
+            #     model='gemini-2.0-flash',
+            #     contents=[
+            #         types.Part.from_bytes(
+            #             data=image_bytes,
+            #             mime_type='image/jpeg',  # or 'image/png' if your image is PNG
+            #         ),
+            #         IMG_GENERATION_PROMPT
+            #     ]
+            # )
+            # return response.text
         
         except Exception as e:
             if "rate limit" in str(e).lower() or "quota" in str(e).lower():
@@ -91,18 +129,27 @@ async def generate_answer(API_KEY,  question, relevant_results, max_tries=5):
 
     Make sure the URLs are copied exactly from the context without any changes.
     """
-    client = Client(api_key=API_KEY)
+    headers = {
+            "Authorization": API_KEY,
+            "Content-Type": "application/json"
+        }
+    payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant that provides accurate answers based only on the provided context. Always include sources in your response with exact URLs."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.3
+        }
+    timeout = httpx.Timeout(60.0, connect=10.0)
     
     for attempt in range(max_tries):
         try:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                config=types.GenerateContentConfig(
-                    system_instruction= 'You are a helpful assistant that provides accurate answers based only on the provided context. Always include sources in your response with exact URLs.'),
-                contents=prompt
-            )
-            
-            return response.text
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post('https://aipipe.org/openai/v1/chat/completions', headers=headers, json=payload)
+                response.raise_for_status()
+                result = response.json()
+                return result["choices"][0]["message"]["content"]
         except Exception as e:
             if "rate limit" in str(e).lower() or "quota" in str(e).lower():
                 wait_time = 2 ** attempt

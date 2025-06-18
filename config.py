@@ -5,9 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY5")
 GEMINI_API_KEY2 = os.getenv("GEMINI_API_KEY2")
 APIS_LIST = os.getenv('API_LIST')
+OPEN_API_KEY = os.getenv('OPEN_API_KEY')
 IMG_GENERATION_PROMPT = """Perform Optical Character Recognition (OCR) on the provided image to extract all readable text accurately. Follow these steps:
 
             1. Analyze the input image or document containing text

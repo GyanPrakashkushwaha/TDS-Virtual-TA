@@ -8,7 +8,7 @@ markdown_embeddings_experi.json
 discourse_embeddings_text_safe.txt
 temp_data_files
 not_needed
-
+embeddings_GEMINI
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

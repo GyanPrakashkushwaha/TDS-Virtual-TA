@@ -95,3 +95,7 @@ def cosine_similarity(vec1, vec2):
     norm_vec1 = np.linalg.norm(vec1)
     norm_vec2 = np.linalg.norm(vec2)
     return dot_product/(norm_vec1 * norm_vec2)
+
+def bytes_to_data_url(image_bytes, mime_type="image/png"):
+    base64_encoded = base64.b64encode(image_bytes).decode('utf-8')
+    return f"data:{mime_type};base64,{base64_encoded}"

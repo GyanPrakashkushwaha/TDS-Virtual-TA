@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 from embed import get_chunks, get_embeddings
-from config import APIS_LIST
+from config import APIS_LIST, OPEN_API_KEY
 from extract_text import clean_html
 import asyncio
 import ast
@@ -10,7 +10,7 @@ import json, os
 from helper import read_json_file, extract_europe1_urls, load_text_file
 
 
-apis_list = ast.literal_eval(APIS_LIST)
+# apis_list = ast.literal_eval(APIS_LIST)
 async def process_save_discourse():
     files = [*Path("raw-data/Discourse-data").glob("*.json")]
     all_chunks = []
@@ -48,9 +48,9 @@ async def process_save_discourse():
 
 
     # First pass: extract content and count chunks for all files
-    count_api_calls = existing_count
+    # count_api_calls = existing_count
     print("🔍 Analyzing files and extracting content...")
-    img_descriptions =  load_text_file('img_description.txt')
+    img_descriptions =  load_text_file('embeddings\img_description.txt')
     for file_path in files:
         data = read_json_file(file_path)
         posts = data.get('post_stream', {}).get('posts', [])
@@ -117,8 +117,7 @@ async def process_save_discourse():
                     all_original_urls.append([topic_url])
                     
                     # Create embeddings for chunks
-                    embedding = await get_embeddings(chunk, apis_list[count_api_calls % 9])
-                    count_api_calls += 1
+                    embedding = await get_embeddings(chunk, OPEN_API_KEY)
                     
                     all_embeddings.append([embedding])
                     
