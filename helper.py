@@ -1,4 +1,6 @@
 import time
+import requests
+import base64
 
 class RateLimiter:
     def __init__(self, requests_per_minute: int = 300, requests_per_second: int = 100000):
@@ -27,3 +29,27 @@ class RateLimiter:
                 
         self.request_times.append(curr_time)
         self.last_request_time = curr_time
+
+
+def image_url_to_base64(image_url, format_hint=None):
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/129.0.0.0 Safari/537.36"
+        ),
+        "Referer": "https://europe1.discourse-cdn.com/"
+    }
+    try:
+        response = requests.get(image_url, headers=headers)
+        response.raise_for_status()
+        img_bytes = response.content
+        base64_str = base64.b64encode(img_bytes).decode()
+        return base64_str
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error for {image_url}: {e}")
+        return None
+    except Exception as e:
+        print(f"Other error for {image_url}: {e}")
+        return None
+

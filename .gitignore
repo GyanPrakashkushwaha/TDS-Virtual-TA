@@ -1,6 +1,7 @@
 # Files to ignore.
 raw-data/
 emergency_save_me.json
+emergency_save.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

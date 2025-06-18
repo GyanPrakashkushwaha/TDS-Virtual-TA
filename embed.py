@@ -11,7 +11,7 @@ rate_limiter = RateLimiter(requests_per_minute=5, requests_per_second=60)
 # rate_limiter = AsyncLimiter(5, 60)  # 5 requests per 60 seconds
 
 async def get_embeddings(text, api_key, model="gemini-embedding-exp-03-07", max_tries=3):
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key='AIzaSyBuoB27iCdNwBI2NIQfsBl5JvqVsbnpcSM')
     for attempt in range(max_tries):
         try:
             rate_limiter.wait()

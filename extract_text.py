@@ -25,3 +25,21 @@ def extract_text_from_markdown(filepath):
     return plain_text.strip(), original_url
 
 
+def clean_html(html_content):
+    if not html_content:
+        return ""
+    
+    # Use BeautifulSoup to parse HTML
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # Remove script and style elements
+    for script_or_style in soup(["script", "style"]):
+        script_or_style.decompose()
+    
+    # Convert to text and clean up whitespace
+    text = soup.get_text(separator=' ')
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
+
+

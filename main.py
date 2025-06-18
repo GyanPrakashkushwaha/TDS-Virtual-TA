@@ -59,8 +59,8 @@ async def process_save_markdown():
             all_chunks = all_chunks_loaded[:valid_count]
             all_embeddings = all_embeddings_loaded[:valid_count]
             all_original_urls = all_original_urls_loaded[:valid_count]
-            existing_count = valid_count
-            
+            existing_count = valid_count - 2
+
             print(f"✅ Loaded {existing_count} valid chunks (filtered out null embeddings)")
 
     # First pass: extract content and count chunks
@@ -103,9 +103,9 @@ async def process_save_markdown():
                 chunk = chunks[j]
                 try:
                     embedding = await get_embeddings(chunk, api_key=GEMINI_API_KEY)
-                    all_chunks.append(chunk)  # Simplified - removed unnecessary list wrapping
-                    all_embeddings.append(embedding)  # Simplified
-                    all_original_urls.append(original_url)  # Simplified
+                    all_chunks.append([chunk])  # Simplified - removed unnecessary list wrapping
+                    all_embeddings.append([embedding])  # Simplified
+                    all_original_urls.append([original_url])  # Simplified
                     processed_count += 1
                     pbar.set_postfix({"file": file_path.name, "chunk": processed_count})
                     print(f'{chunk} is created of url {original_url} and first few embeddings are: {embedding[:6]}')
@@ -115,10 +115,20 @@ async def process_save_markdown():
                     pbar.update(1)
     
     # Save once at the end
+    data_safe = {
+        "chunks": all_chunks,
+        "embeddings": all_embeddings,
+        "original_urls": all_original_urls,
+    }
+    
+    with open("markdown_embeddings_safe.json", "w", encoding="utf-8") as f:
+        json.dump(data_safe, f, indent=2, ensure_ascii=False)
+        
     np.savez("markdown_embeddings.npz", 
              chunks=all_chunks, 
              embeddings=all_embeddings, 
              original_urls=all_original_urls)
+    
 if __name__ == "__main__":
     asyncio.run(process_save_markdown())
     print("Processing complete. Embeddings saved to 'markdown_embeddings.npz'.")  # Fixed syntax
