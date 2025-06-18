@@ -1,7 +1,10 @@
 from embed import (get_embeddings, 
-                   generate_answer)
+                   generate_answer,
+                   describe_base64_image)
 from config import GEMINI_API_KEY
-from helper import (load_embeddings)
+from helper import (load_embeddings, 
+                    extract_europe1_urls,
+                    image_url_to_base64)
 from get_answer import find_similar_content, parse_llm_response
 import asyncio
 import json
@@ -9,7 +12,11 @@ import json
 
 async def result_response(question):
     try:
-        
+        url = extract_europe1_urls(question)
+        base64_img = image_url_to_base64(url[0])
+        img_description = await describe_base64_image(base64_img,GEMINI_API_KEY, 3)
+        # print(img_description)
+        question = question + img_description
         CONTEXT = 10
         discourse_embeddings = load_embeddings('embeddings\discourse_embeddings.npz')
         markdown_embeddings = load_embeddings('embeddings\markdown_embeddings.npz')

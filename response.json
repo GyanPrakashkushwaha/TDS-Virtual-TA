@@ -1,4 +1,13 @@
 {
-    "answer": "I don't have enough information to answer this question.",
-    "links": []
+    "answer": "For the Jan 2025 batch, you should use the `gpt-4o-mini` model via Anand sir's AI Proxy instead of directly using the OpenAI API. The context states that for this batch, API keys were created to use `gpt-4o-mini` and `text-embedding-3-small`, and it specifically advises to \"Use AI Proxy instead of OpenAI.\" To calculate the cost for the given text as asked in the question, you would send a request to the AI Proxy using `gpt-4o-mini` to get the number of input tokens, and then apply the cost rate of 50 cents per million input tokens for the `gpt-3.5-turbo-0125` model as specified in the question.",
+    "links": [
+        {
+            "url": "https://tds.s-anand.net/#/large-language-models?id=large-language-models,",
+            "text": "For the Jan 2025 batch, we had created API keys for everyone with an iitm.ac.in email to use gpt-4o-mini and text-embedding-3-small. Your usage is limited to $1 per calendar month for this course. Don\u2019t exceed that. Use AI Proxy instead of OpenAI."
+        },
+        {
+            "url": "https://discourse.onlinedegree.iitm.ac.in/t/ga3-large-language-models-discussion-thread-tds-jan-2025/163247,",
+            "text": "Other way to do this question is send a request to anand sir\u2019s aiproxy and in response you will get number of input tokens."
+        }
+    ]
 }
