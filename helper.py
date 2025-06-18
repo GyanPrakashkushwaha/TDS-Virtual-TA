@@ -1,9 +1,14 @@
 import time
 import requests
 import base64
+import re
+import json
+import ast
+import numpy as np
+
 
 class RateLimiter:
-    def __init__(self, requests_per_minute: int = 300, requests_per_second: int = 100000):
+    def __init__(self, requests_per_minute: int = 300, requests_per_second: int = 100):
         self.requests_per_minute = requests_per_minute
         self.requests_per_second = requests_per_second
         self.request_times = []
@@ -53,3 +58,40 @@ def image_url_to_base64(image_url, format_hint=None):
         print(f"Other error for {image_url}: {e}")
         return None
 
+def extract_europe1_urls(text):
+    # Regex pattern to find URLs starting with 'https://europe1'
+    pattern = r'https://europe1[^"\s]+'
+    urls = re.findall(pattern, text)
+    return urls
+
+def read_json_file(file):
+    with open(file, 'r', encoding='utf-8') as f:
+        return json.load(f)
+    
+def load_embeddings(file_path):
+    try:
+        return np.load(file_path)
+    except Exception as e:
+        print(e)
+
+
+def load_text_file(file_path):
+    """Load embeddings from txt file containing str(dict) format"""
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        # Convert string representation back to dictionary
+        saved_data = ast.literal_eval(content)
+        return saved_data
+    except Exception as e:
+        print(f"Error loading from {file_path}: {e}")
+        return None
+
+def cosine_similarity(vec1, vec2):
+    vec1 = np.array(vec1)
+    vec2 = np.array(vec2[0])
+    dot_product = np.dot(vec1, vec2)
+    norm_vec1 = np.linalg.norm(vec1)
+    norm_vec2 = np.linalg.norm(vec2)
+    return dot_product/(norm_vec1 * norm_vec2)

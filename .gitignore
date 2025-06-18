@@ -2,6 +2,10 @@
 raw-data/
 emergency_save_me.json
 emergency_save.json
+markdown_embeddings_safe.json
+# markdown_embeddings_safe.json
+markdown_embeddings_experi.json
+discourse_embeddings_text_safe.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

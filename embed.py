@@ -1,17 +1,17 @@
-import time
-from semantic_text_splitter import MarkdownSplitter
-from google import genai
+from google.genai import Client, types
 from helper import RateLimiter 
 import re
 import asyncio
-# from aiolimiter import AsyncLimiter
+import base64
+from config import IMG_GENERATION_PROMPT
 
-rate_limiter = RateLimiter(requests_per_minute=5, requests_per_second=60)
+rate_limiter = RateLimiter(requests_per_minute=50, requests_per_second=60)
 
 # rate_limiter = AsyncLimiter(5, 60)  # 5 requests per 60 seconds
 
-async def get_embeddings(text, api_key, model="gemini-embedding-exp-03-07", max_tries=3):
-    client = genai.Client(api_key='AIzaSyBuoB27iCdNwBI2NIQfsBl5JvqVsbnpcSM')
+async def get_embeddings(text, api_key, model="gemini-embedding-exp-03-07", max_tries=10):
+    # api_key = api_keys[0]
+    client = Client(api_key=api_key)
     for attempt in range(max_tries):
         try:
             rate_limiter.wait()
@@ -24,6 +24,7 @@ async def get_embeddings(text, api_key, model="gemini-embedding-exp-03-07", max_
             if "rate limit" in str(e).lower() or "quota" in str(e).lower():
                 wait_time = 2 ** attempt
                 print(f"Rate limit exceeded, retrying in {wait_time} seconds...")
+                # api_key = api_keys[1]
                 await asyncio.sleep(wait_time)
             elif attempt == max_tries - 1:
                 print(f"Failed to get embeddings after {max_tries} attempts: {e}")
@@ -33,7 +34,90 @@ async def get_embeddings(text, api_key, model="gemini-embedding-exp-03-07", max_
                 await asyncio.sleep(1)
 
 
-def get_chunks(text, chunk_size: int = 1000, chunk_overlap: int = 100, max_embedding_chars: int = 8000):
+async def describe_base64_image(base64_image, api_key, max_tries):
+    # Decode the base64 string to bytes
+    image_bytes = base64.b64decode(base64_image)
+
+    client = Client(api_key=api_key)
+    for attempt in range(max_tries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=[
+                    types.Part.from_bytes(
+                        data=image_bytes,
+                        mime_type='image/jpeg',  # or 'image/png' if your image is PNG
+                    ),
+                    IMG_GENERATION_PROMPT
+                ]
+            )
+            return response.text
+        
+        except Exception as e:
+            if "rate limit" in str(e).lower() or "quota" in str(e).lower():
+                wait_time = 2 ** attempt
+                print(f"Rate limit exceeded, retrying in {wait_time} seconds...")
+                # api_key = api_keys[1]
+                await asyncio.sleep(wait_time)
+            elif attempt == max_tries - 1:
+                print(f"Failed to get embeddings after {max_tries} attempts: {e}")
+                raise
+            else:
+                print(f'attempt {attempt + 1} failed with error: {e}, retrying...')
+                await asyncio.sleep(1)
+
+async def generate_answer(API_KEY,  question, relevant_results, max_tries=5):
+    context = ""
+    for result in relevant_results:
+        source_type = "Discourse post" if result["source"] == "discourse" else "Documentation"
+        context += f"\n\n{source_type} (URL: {result['url']}):\n{result['contents'][:1500]}"
+    
+    prompt = f"""Answer the following question based ONLY on the provided context. 
+    If you cannot answer the question based on the context, say "I don't have enough information to answer this question."
+
+    Context:
+    {context}
+
+    Question: {question}
+
+    Return your response in this exact format:
+    1. A comprehensive yet concise answer
+    2. A "Sources:" section that lists the URLs and relevant text snippets you used to answer
+
+    Sources must be in this exact format:
+    Sources:
+    1. URL: [exact_url_1], Text: [brief quote or description]
+    2. URL: [exact_url_2], Text: [brief quote or description]
+
+    Make sure the URLs are copied exactly from the context without any changes.
+    """
+    client = Client(api_key=API_KEY)
+    
+    for attempt in range(max_tries):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                config=types.GenerateContentConfig(
+                    system_instruction= 'You are a helpful assistant that provides accurate answers based only on the provided context. Always include sources in your response with exact URLs.'),
+                contents=prompt
+            )
+            
+            return response.text
+        except Exception as e:
+            if "rate limit" in str(e).lower() or "quota" in str(e).lower():
+                wait_time = 2 ** attempt
+                print(f"Rate limit exceeded, retrying in {wait_time} seconds...")
+                # api_key = api_keys[1]
+                await asyncio.sleep(wait_time)
+            elif attempt == max_tries - 1:
+                print(f"Failed to get embeddings after {max_tries} attempts: {e}")
+                raise
+            else:
+                print(f'attempt {attempt + 1} failed with error: {e}, retrying...')
+                await asyncio.sleep(1)
+                
+
+def get_chunks(text, chunk_overlap: int = 100, max_embedding_chars: int = 8000):
     if not text:
         return []
     
